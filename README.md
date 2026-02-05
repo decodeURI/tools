@@ -4,7 +4,7 @@ Mana tau kepake, brute force direktori OJS pake varian baru. Script ini otomatis
 
 Full async, sat-set. Logger? Gak ada wkwk.
 
-![Preview Screenshot](https://github.com/decodeURI/tools/blob/main/Screenshot%202026-02-06%20033227.png?raw=true)
+![Preview Screenshot](https://github.com/decodeURI/tools/blob/main/tol.png?raw=true)
 
 ---
 
