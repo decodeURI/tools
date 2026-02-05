@@ -6,10 +6,8 @@ import aiofiles
 import os
 from urllib.parse import urlparse
 
-# --- KONFIGURASI WARNA ---
 GREEN, CYAN, YELLOW, RED, PURPLE, GRAY, RESET = "\033[92m", "\033[96m", "\033[93m", "\033[91m", "\033[95m", "\033[90m", "\033[0m"
 
-# Keywords diperkaya agar lebih akurat untuk OJS
 KEYWORDS = [
     'archive', 'archives', 'ojs3.3', 'content', 'data', 
     'dokumen', 'download', 'file', 'files', 'internal', 'ejurnal', 
@@ -23,7 +21,7 @@ USER_AGENTS = [
 ]
 
 TIMEOUT_CONFIG = aiohttp.ClientTimeout(total=20, connect=7, sock_read=10)
-CONCURRENCY = 100 # Ditingkatkan karena antrean akan sangat banyak
+CONCURRENCY = 100 
 
 def generate_dynamic_payloads(domain_url):
     """
@@ -37,24 +35,20 @@ def generate_dynamic_payloads(domain_url):
     final_payloads = set()
     separators = ['', '_', '-']
 
-    # 1. Standar: /keyword (Contoh: /files)
     for kw in KEYWORDS:
         final_payloads.add(f"/{kw}")
     
-    # 2. Subdomain Permutation: /sub_keyword (Contoh: /hcuc_files)
     if sub:
         for kw in KEYWORDS:
             for sep in separators:
                 final_payloads.add(f"/{sub}{sep}{kw}")
                 final_payloads.add(f"/{kw}{sep}{sub}")
     
-    # 3. FULL CROSS-KEYWORD PERMUTATION (Matrix 25x25)
-    # Ini yang akan menemukan 'files_ojsUpload' atau 'ojs_data_files'
     for k1 in KEYWORDS:
         for k2 in KEYWORDS:
             if k1 != k2:
                 for sep in separators:
-                    # Contoh hasil: /files_ojsUpload, /filesojsUpload, /ojsUpload-files
+
                     final_payloads.add(f"/{k1}{sep}{k2}")
     
     return list(final_payloads)
@@ -62,7 +56,6 @@ def generate_dynamic_payloads(domain_url):
 async def check_url(session, base_url, path):
     target_url = base_url.rstrip('/') + path
     
-    # Loader Tampilan
     sys.stdout.write(f"\r{GRAY}[CHECKING]{RESET} -> {path[:40]}{' ' * 10}")
     sys.stdout.flush()
     
@@ -70,24 +63,20 @@ async def check_url(session, base_url, path):
         headers = {'User-Agent': random.choice(USER_AGENTS)}
         async with session.get(target_url, headers=headers, timeout=TIMEOUT_CONFIG, allow_redirects=False, ssl=False) as resp:
             
-            # 1. Logika Redirect (301/302)
             if resp.status in [301, 302]:
                 loc = resp.headers.get('Location', '')
-                # Jika /path redirect ke /path/ berarti folder ada
                 if path in loc:
                     print(f"\r{GREEN}[FOUND DIR]{RESET} -> {target_url}/ (Redirect Valid){' ' * 30}")
                     async with aiofiles.open("found_dirs.txt", "a") as f:
                         await f.write(target_url + "/\n")
                     return True
 
-            # 2. Logika Forbidden (403)
             if resp.status == 403:
                 print(f"\r{PURPLE}[FORBIDDEN]{RESET} -> {target_url} (Valid Folder){' ' * 30}")
                 async with aiofiles.open("found_forbidden.txt", "a") as f:
                     await f.write(target_url + "\n")
                 return True
 
-            # 3. Logika Index Of (200)
             if resp.status == 200:
                 text = await resp.text(errors='ignore')
                 if any(x in text.lower() for x in ["index of", "parent directory"]):
@@ -107,7 +96,7 @@ async def worker(queue, session):
         queue.task_done()
 
 async def start_scanning():
-    print(f"\n{CYAN}Target Domain (Contoh: hcuc.com.my) > {RESET}", end="")
+    print(f"\n{CYAN}Target Domain (Contoh: jurnal.komdigi.go.id) > {RESET}", end="")
     inp = input().strip()
     if not inp: return
 
